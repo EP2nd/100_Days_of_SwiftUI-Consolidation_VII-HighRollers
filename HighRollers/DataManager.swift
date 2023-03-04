@@ -9,7 +9,7 @@ import Foundation
 
 struct DataManager {
     
-    static let savePath = FileManager.documentsDirectory.appendingPathExtension("HighRollers")
+    static let savePath = FileManager.documentsDirectory.appendingPathComponent("HighRollers.json")
     
     static func save<T: Codable>(data: [T]) {
         if let encoded = try? JSONEncoder().encode(data) {

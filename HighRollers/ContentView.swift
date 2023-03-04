@@ -12,8 +12,8 @@ struct ContentView: View {
     
     @State private var scores = [Score]()
     
-    @State private var amountOfDice = 5
-    @State private var dieType = 4
+    @AppStorage("selectedDiceAmount") private var amountOfDice = 5
+    @AppStorage("selectedDieType") private var dieType = 4
     
     var dieTypes: [Int] {
         stride(from: 4, to: 102, by: 2).map { $0 }
@@ -23,11 +23,11 @@ struct ContentView: View {
     
     @State private var score = 0
     
-    @State private var timer = Timer.publish(every: 0.1, tolerance: 0.5, on: .main, in: .common).autoconnect()
+    @State private var timer = Timer.publish(every: 0.1, tolerance: 0.1, on: .main, in: .common).autoconnect()
     @State private var isTimerActive = false
     @State private var counter = 0
     
-    @State private var engine: CHHapticEngine?
+    @State private var feedback = UIImpactFeedbackGenerator(style: .heavy)
     
     var body: some View {
         NavigationView {
@@ -55,6 +55,7 @@ struct ContentView: View {
                                     .frame(width: 50, height: 50)
                                     .background(.gray)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .shadow(radius: 3)
                             }
                             .frame(width: 10, height: 50)
                             .accessibilityLabel("Dice with value \(value).")
@@ -66,13 +67,13 @@ struct ContentView: View {
                     rollDice()
                 } label: {
                     Spacer()
+                    
                     Text("Roll!")
-                        .accessibilityLabel("Roll and wait for three seconds.")
+                    
                     Spacer()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(amountOfDice == 0)
-                .onAppear(perform: prepareHaptics)
                 
                 Section {
                     Text(String(score))
@@ -83,9 +84,11 @@ struct ContentView: View {
                         .accessibilityLabel("The total rolled on the dice:")
                 }
                 
-                Section("Highest scores:") {
-                    ForEach(scores.sorted()) { score in
-                        Text("\(score.record)")
+                if scores.isEmpty == false {
+                    Section("Highest scores:") {
+                        ForEach(scores.sorted()) { score in
+                            Text("\(score.record)")
+                        }
                     }
                 }
             }
@@ -105,6 +108,7 @@ struct ContentView: View {
             } else {
                 withAnimation(.easeInOut.speed(1.0)) {
                     generateDieValues()
+                    feedback.impactOccurred()
                 }
             }
             
@@ -113,30 +117,9 @@ struct ContentView: View {
     }
     
     func rollDice() {
-        hapticFeedback()
-        setTimer()
-    }
-    
-    func prepareHaptics() {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
-        
-        do {
-            engine = try CHHapticEngine()
-            try engine?.start()
-        } catch {
-            print("There was an error creating the engine: \(error.localizedDescription)")
-        }
-    }
-    
-    func hapticFeedback() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-    }
-    
-    func setTimer() {
         counter = 0
         isTimerActive = true
-        timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+        timer = Timer.publish(every: 0.1, tolerance: 0.1, on: .main, in: .common).autoconnect()
     }
     
     func generateDieValues()  {
